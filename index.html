@@ -231,15 +231,44 @@
 
   /* on narrow screens, shrink the floating panels so they don't cover the whole map */
   @media (max-width: 700px) {
-    .layer-switcher, .legend, .info-box, .search-box, .rank-sidebar { min-width: 0; width: min(78vw, 280px); }
+    .unified-menu, .legend, .info-box { min-width: 0; width: min(84vw, 300px); }
   }
 
-  /* layer switcher */
-  .layer-switcher {
-    min-width: 190px;
+  /* unified menu (layers / search & filter / ranking / display) */
+  .unified-menu { min-width: 250px; }
+  .unified-menu .panel-body { padding: 10px; position: relative; }
+  .menu-tabs { display: flex; gap: 3px; margin-bottom: 10px; }
+  .menu-tab {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--panel-border);
+    color: var(--text-dim);
+    padding: 6px 4px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    cursor: pointer;
   }
-  .layer-switcher .panel-body { padding: 6px 10px 10px; }
-  .layer-switcher button {
+  .menu-tab.active { background: var(--accent); color: #041018; border-color: var(--accent); font-weight: 600; }
+  .menu-tab:not(.active):hover { background: var(--hover-bg); }
+  .menu-tab.tab-disabled { opacity: 0.4; pointer-events: none; }
+  .menu-panel { display: none; }
+  .menu-panel.active { display: block; }
+  .menu-section-label { font-size: 11px; color: var(--text-dim); margin: 10px 0 4px; }
+  .menu-section-label:first-child { margin-top: 0; }
+  .unified-menu select, .unified-menu input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    outline: none;
+  }
+  .unified-menu input[type="text"]:focus, .unified-menu select:focus { border-color: var(--accent); }
+
+  /* layer switcher (inside "layers" tab) */
+  .layer-switcher-list button {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -254,37 +283,21 @@
     cursor: pointer;
     margin-bottom: 2px;
   }
-  .layer-switcher button:hover { background: var(--hover-bg); }
-  .layer-switcher button.active { background: var(--accent); color: #041018; font-weight: 600; }
-  .layer-switcher .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .layer-switcher-list button:hover { background: var(--hover-bg); }
+  .layer-switcher-list button.active { background: var(--accent); color: #041018; font-weight: 600; }
+  .layer-switcher-list .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 
-  .region-filter, .map-display { min-width: 210px; }
-  .region-filter .panel-body, .map-display .panel-body { padding: 8px 10px 10px; }
-
-  /* search box */
-  .search-box { min-width: 220px; margin-bottom: 8px; }
-  .search-box .panel-body { padding: 8px 10px 10px; position: relative; }
-  .search-box input {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--panel-border);
-    color: var(--text);
-    border-radius: 6px;
-    padding: 7px 10px;
-    font-size: 13px;
-    outline: none;
-  }
-  .search-box input:focus { border-color: var(--accent); }
+  /* search (inside "search" tab) */
   .search-results {
     position: absolute;
-    top: 100%;
+    top: auto;
     right: 10px;
     left: 10px;
     background: var(--panel);
     border: 1px solid var(--panel-border);
     border-radius: 8px;
     margin-top: 4px;
-    max-height: 260px;
+    max-height: 220px;
     overflow-y: auto;
     box-shadow: 0 6px 18px rgba(0,0,0,0.3);
     z-index: 1200;
@@ -302,9 +315,7 @@
   .search-results .result-item .r-region { color: var(--text-dim); font-size: 11px; }
   .search-results .no-results { padding: 10px 12px; font-size: 12.5px; color: var(--text-dim); }
 
-  /* ranked sidebar */
-  .rank-sidebar { min-width: 230px; max-width: 260px; }
-  .rank-sidebar .panel-body { padding: 8px 10px 10px; }
+  /* ranking (inside "rank" tab) */
   .rank-tabs { display: flex; gap: 4px; margin-bottom: 6px; }
   .rank-tab {
     flex: 1;
@@ -853,19 +864,6 @@ function styleFeature(feature) {
   };
 }
 
-const searchControl = L.control({ position: 'topleft' });
-searchControl.onAdd = function () {
-  this._div = L.DomUtil.create('div', 'panel search-box');
-  L.DomEvent.disableClickPropagation(this._div);
-  const body = L.DomUtil.create('div', 'panel-body', this._div);
-  body.innerHTML = `
-    <input type="text" id="countrySearchInput" placeholder="חיפוש מדינה..." autocomplete="off">
-    <div class="search-results" id="searchResults"></div>
-  `;
-  attachToggle(this._div, 'חיפוש מדינה', IS_MOBILE);
-  return this._div;
-};
-searchControl.addTo(map);
 
 function setupSearch() {
   const input = document.getElementById('countrySearchInput');
@@ -898,10 +896,10 @@ function setupSearch() {
     selectCountryByIso3(item.dataset.iso3);
     input.value = geoData.features.find(f => f.properties.iso3 === item.dataset.iso3).properties.name;
     results.classList.remove('open');
-    if (IS_MOBILE) searchControl._div.classList.add('collapsed');
+    if (IS_MOBILE) unifiedMenuControl._div.classList.add('collapsed');
   });
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.search-box')) results.classList.remove('open');
+    if (!e.target.closest('.unified-menu')) results.classList.remove('open');
   });
 }
 
@@ -1025,70 +1023,6 @@ legendControl.update = function () {
 };
 legendControl.addTo(map);
 
-const rankControl = L.control({ position: 'bottomright' });
-rankControl.onAdd = function () {
-  this._div = L.DomUtil.create('div', 'panel rank-sidebar');
-  L.DomEvent.disableClickPropagation(this._div);
-  this._body = L.DomUtil.create('div', 'panel-body', this._div);
-  this._mode = 'top';
-  attachToggle(this._div, 'דירוג מדינות', IS_MOBILE);
-  return this._div;
-};
-rankControl.update = function () {
-  if (!geoData) return;
-  const key = currentLayerKey;
-  const layer = LAYERS.find(l => l.key === key);
-  const items = geoData.features
-    .map(f => ({ iso3: f.properties.iso3, name: f.properties.name, value: getEffectiveValue(f.properties, key) }))
-    .filter(x => x.value !== null && x.value !== undefined)
-    .sort((a, b) => this._mode === 'top' ? b.value - a.value : a.value - b.value)
-    .slice(0, 10);
-  const rows = items.map((it, i) => `
-    <div class="rank-item" data-iso3="${it.iso3}">
-      <span class="rank-num">${i + 1}</span>
-      <span class="rank-name">${it.name}</span>
-      <span class="rank-val">${fmtNum(it.value, key)}</span>
-    </div>
-  `).join('');
-  const yearNote = (timeSliderActive && TIME_SERIES_KEYS_FRONTEND.includes(key))
-    ? `<div class="rank-layer-label" style="color:var(--accent)">🕐 שנת ${timeSliderYear}</div>` : '';
-  this._body.innerHTML = `
-    <div class="rank-tabs">
-      <button class="rank-tab ${this._mode === 'top' ? 'active' : ''}" data-mode="top">מובילות</button>
-      <button class="rank-tab ${this._mode === 'bottom' ? 'active' : ''}" data-mode="bottom">בתחתית</button>
-    </div>
-    <div class="rank-layer-label">${layer.label}</div>
-    ${yearNote}
-    <div class="rank-list">${rows}</div>
-  `;
-  this._body.querySelectorAll('.rank-tab').forEach(btn => {
-    btn.onclick = () => { this._mode = btn.dataset.mode; this.update(); };
-  });
-  this._body.querySelectorAll('.rank-item').forEach(item => {
-    item.onclick = () => selectCountryByIso3(item.dataset.iso3);
-  });
-};
-rankControl.addTo(map);
-
-const switcherControl = L.control({ position: 'topright' });
-switcherControl.onAdd = function () {
-  const div = L.DomUtil.create('div', 'panel layer-switcher');
-  L.DomEvent.disableClickPropagation(div);
-  const body = L.DomUtil.create('div', 'panel-body', div);
-  LAYERS.forEach(l => {
-    const btn = document.createElement('button');
-    btn.dataset.key = l.key;
-    const badgeHtml = l.badge ? `<span style="font-size:10px;color:var(--text-dim)">(${l.badge})</span>` : '';
-    btn.innerHTML = `<span class="dot" style="background:${l.color}"></span><span>${l.label} ${badgeHtml}</span>`;
-    btn.onclick = () => setLayer(l.key);
-    body.appendChild(btn);
-  });
-  attachToggle(div, 'שכבת מידע', IS_MOBILE);
-  this._div = div;
-  return div;
-};
-switcherControl.addTo(map);
-
 const REGIONS_HE = [
   "מזרח אסיה והאוקיינוס השקט",
   "אירופה ואסיה המרכזית",
@@ -1099,52 +1033,130 @@ const REGIONS_HE = [
   "אפריקה שמדרום לסהרה",
 ];
 let activeRegion = null;
+let rankMode = 'top';
 
-const regionControl = L.control({ position: 'topright' });
-regionControl.onAdd = function () {
-  const div = L.DomUtil.create('div', 'panel region-filter');
+const unifiedMenuControl = L.control({ position: 'topright' });
+unifiedMenuControl.onAdd = function () {
+  const div = L.DomUtil.create('div', 'panel unified-menu');
   L.DomEvent.disableClickPropagation(div);
   const body = L.DomUtil.create('div', 'panel-body', div);
-  const options = ['<option value="">כל העולם</option>']
-    .concat(REGIONS_HE.map(r => `<option value="${r}">${r}</option>`));
-  body.innerHTML = `<select id="regionSelect" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--panel-border);border-radius:6px;padding:6px 8px;font-size:12.5px">${options.join('')}</select>`;
-  attachToggle(div, 'סינון לפי אזור', IS_MOBILE);
+
+  const layerButtonsHtml = LAYERS.map(l => {
+    const badgeHtml = l.badge ? `<span style="font-size:10px;color:var(--text-dim)">(${l.badge})</span>` : '';
+    return `<button data-key="${l.key}"><span class="dot" style="background:${l.color}"></span><span>${l.label} ${badgeHtml}</span></button>`;
+  }).join('');
+  const regionOptionsHtml = ['<option value="">כל העולם</option>']
+    .concat(REGIONS_HE.map(r => `<option value="${r}">${r}</option>`)).join('');
+  const basemapOptionsHtml = Object.keys(BASEMAPS).map(k => `<option value="${k}">${BASEMAPS[k].label}</option>`).join('');
+
+  body.innerHTML = `
+    <div class="menu-tabs">
+      <button class="menu-tab active" data-tab="layers">שכבות</button>
+      <button class="menu-tab" data-tab="search">חיפוש</button>
+      <button class="menu-tab" data-tab="rank">דירוג</button>
+      <button class="menu-tab" data-tab="display">תצוגה</button>
+    </div>
+    <div class="menu-panel active" data-panel="layers">
+      <div class="layer-switcher-list">${layerButtonsHtml}</div>
+    </div>
+    <div class="menu-panel" data-panel="search">
+      <input type="text" id="countrySearchInput" placeholder="חיפוש מדינה..." autocomplete="off">
+      <div class="search-results" id="searchResults"></div>
+      <div class="menu-section-label">סינון לפי אזור</div>
+      <select id="regionSelect">${regionOptionsHtml}</select>
+    </div>
+    <div class="menu-panel" data-panel="rank">
+      <div class="rank-tabs">
+        <button class="rank-tab active" data-mode="top">מובילות</button>
+        <button class="rank-tab" data-mode="bottom">בתחתית</button>
+      </div>
+      <div class="rank-layer-label" id="rankLayerLabel"></div>
+      <div id="rankYearNote"></div>
+      <div class="rank-list" id="rankList"></div>
+    </div>
+    <div class="menu-panel" data-panel="display">
+      <div class="menu-section-label">שכבת בסיס</div>
+      <select id="basemapSelect">${basemapOptionsHtml}</select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;margin-top:12px">
+        <input type="checkbox" id="terminatorToggle">
+        <span>הצג קו יום/לילה בזמן אמת</span>
+      </label>
+    </div>
+  `;
+
+  body.querySelectorAll('.menu-tab').forEach(tabBtn => {
+    tabBtn.addEventListener('click', () => setActiveMenuTab(tabBtn.dataset.tab));
+  });
+  body.querySelectorAll('.layer-switcher-list button').forEach(btn => {
+    btn.onclick = () => setLayer(btn.dataset.key);
+  });
+  body.querySelectorAll('.menu-panel[data-panel="rank"] .rank-tab').forEach(btn => {
+    btn.onclick = () => { rankMode = btn.dataset.mode; updateRankPanel(); };
+  });
+
+  attachToggle(div, 'תפריט מפה', IS_MOBILE);
+  this._div = div;
+  this._body = body;
   return div;
 };
-regionControl.addTo(map);
+unifiedMenuControl.addTo(map);
+
+function setActiveMenuTab(tab) {
+  const div = unifiedMenuControl._div;
+  div.querySelectorAll('.menu-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  div.querySelectorAll('.menu-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
+}
+
+function setLayersTabEnabled(enabled) {
+  const div = unifiedMenuControl._div;
+  const tabBtn = div.querySelector('.menu-tab[data-tab="layers"]');
+  tabBtn.classList.toggle('tab-disabled', !enabled);
+  if (!enabled && tabBtn.classList.contains('active')) setActiveMenuTab('display');
+}
+
 document.getElementById('regionSelect').addEventListener('change', (e) => {
   activeRegion = e.target.value || null;
   if (geoLayer) geoLayer.setStyle(styleFeature);
   updateUrlState();
 });
 
-const mapDisplayControl = L.control({ position: 'topright' });
-mapDisplayControl.onAdd = function () {
-  const div = L.DomUtil.create('div', 'panel map-display');
-  L.DomEvent.disableClickPropagation(div);
-  const body = L.DomUtil.create('div', 'panel-body', div);
-  const basemapOptions = Object.keys(BASEMAPS).map(k => `<option value="${k}">${BASEMAPS[k].label}</option>`).join('');
-  body.innerHTML = `
-    <div style="margin-bottom:8px">
-      <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px">שכבת בסיס</div>
-      <select id="basemapSelect" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--panel-border);border-radius:6px;padding:6px 8px;font-size:12.5px">${basemapOptions}</select>
-    </div>
-    <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer">
-      <input type="checkbox" id="terminatorToggle">
-      <span>הצג קו יום/לילה בזמן אמת</span>
-    </label>
-  `;
-  attachToggle(div, 'תצוגת מפה', IS_MOBILE);
-  return div;
-};
-mapDisplayControl.addTo(map);
 document.getElementById('basemapSelect').value = currentBasemapKey;
 document.getElementById('basemapSelect').addEventListener('change', (e) => {
   setBasemap(e.target.value, { userTriggered: true });
 });
 
+function updateRankPanel() {
+  if (!geoData) return;
+  const key = currentLayerKey;
+  const layer = LAYERS.find(l => l.key === key);
+  const items = geoData.features
+    .map(f => ({ iso3: f.properties.iso3, name: f.properties.name, value: getEffectiveValue(f.properties, key) }))
+    .filter(x => x.value !== null && x.value !== undefined)
+    .sort((a, b) => rankMode === 'top' ? b.value - a.value : a.value - b.value)
+    .slice(0, 10);
+  const rows = items.map((it, i) => `
+    <div class="rank-item" data-iso3="${it.iso3}">
+      <span class="rank-num">${i + 1}</span>
+      <span class="rank-name">${it.name}</span>
+      <span class="rank-val">${fmtNum(it.value, key)}</span>
+    </div>
+  `).join('');
+  const yearNote = (timeSliderActive && TIME_SERIES_KEYS_FRONTEND.includes(key))
+    ? `<div class="rank-layer-label" style="color:var(--accent)">🕐 שנת ${timeSliderYear}</div>` : '';
+  const div = unifiedMenuControl._div;
+  div.querySelectorAll('.rank-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === rankMode));
+  div.querySelector('#rankLayerLabel').textContent = layer.label;
+  div.querySelector('#rankYearNote').innerHTML = yearNote;
+  const list = div.querySelector('#rankList');
+  list.innerHTML = rows;
+  list.querySelectorAll('.rank-item').forEach(item => {
+    item.onclick = () => selectCountryByIso3(item.dataset.iso3);
+  });
+}
+const rankControl = { update: updateRankPanel };
+
 function refreshSwitcherButtons() {
-  document.querySelectorAll('.layer-switcher button').forEach(btn => {
+  unifiedMenuControl._div.querySelectorAll('.layer-switcher-list button').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.key === currentLayerKey);
   });
 }
@@ -1156,7 +1168,7 @@ function setLayer(key) {
   legendControl.update();
   rankControl.update();
   refreshTimeLayerSupport();
-  if (IS_MOBILE) switcherControl._div.classList.add('collapsed');
+  if (IS_MOBILE) unifiedMenuControl._div.classList.add('collapsed');
   updateUrlState();
 }
 
@@ -1393,7 +1405,7 @@ function setSplitActive(on) {
   document.getElementById('splitDivider').style.display = on ? 'block' : 'none';
   document.getElementById('splitBar').style.display = on ? 'flex' : 'none';
   document.querySelector('#splitToggleBtn .btn-label').textContent = on ? 'סגירת השוואת שכבות' : 'השוואת שכבות';
-  switcherControl._div.style.display = on ? 'none' : '';
+  setLayersTabEnabled(!on);
   if (on) {
     initMap2();
     map2.invalidateSize();
@@ -1520,7 +1532,7 @@ function setBivariateActive(on) {
   bivariateActive = on;
   document.getElementById('bivariateBar').style.display = on ? 'flex' : 'none';
   document.querySelector('#bivariateToggleBtn .btn-label').textContent = on ? 'סגירת מפה דו-משתנית' : 'מפה דו-משתנית';
-  switcherControl._div.style.display = on ? 'none' : '';
+  setLayersTabEnabled(!on);
   if (on) {
     bivariateXTertiles = computeTertiles(bivariateXKey);
     bivariateYTertiles = computeTertiles(bivariateYKey);
