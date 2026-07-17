@@ -26,11 +26,11 @@
   "literacy_rate": {
     "min": 26.8299999237061,
     "max": 100,
-    "q20": 71.7699966430664,
-    "q40": 88.8600006103516,
-    "q60": 96.129997253418,
-    "q80": 98.6800003051758,
-    "count_with_data": 169,
+    "q20": 72.5999984741211,
+    "q40": 91.0999984741211,
+    "q60": 96.5400009155273,
+    "q80": 98.8600006103516,
+    "count_with_data": 189,
     "count_total": 215,
     "indicator_code": "SE.ADT.LITR.ZS",
     "label_he": "אחוז יודעי קרוא וכתוב (גילאי 15+)"
@@ -70,5 +70,66 @@
     "count_total": 215,
     "indicator_code": "SP.URB.TOTL.IN.ZS",
     "label_he": "אחוז עירוניות (% מהאוכלוסייה)"
+  },
+  "piaac_literacy": {
+    "min": 218,
+    "max": 296,
+    "q20": 247,
+    "q40": 254,
+    "q60": 266,
+    "q80": 276,
+    "count_with_data": 32,
+    "count_total": 215,
+    "indicator_code": "OECD PIAAC",
+    "label_he": "מיומנות אוריינות פונקציונלית (OECD PIAAC, סולם 0–500)",
+    "source_url": "https://www.oecd.org/en/publications/2024/12/do-adults-have-the-skills-they-need-to-thrive-in-a-changing-world_4396f1f1.html"
+  },
+  "natural_growth_rate": {
+    "min": -10.583,
+    "max": 36.814,
+    "q20": -0.131,
+    "q40": 4.4,
+    "q60": 10.953,
+    "q80": 20.742,
+    "count_with_data": 215,
+    "count_total": 215,
+    "indicator_code": "SP.DYN.CBRT.IN minus SP.DYN.CDRT.IN (מחושב)",
+    "label_he": "גידול טבעי (שיעור ילודה פחות שיעור תמותה, ל-1,000 נפש)"
+  },
+  "population": {
+    "min": 9646,
+    "max": 1450935791,
+    "q20": 462721,
+    "q40": 3812518,
+    "q60": 10905028,
+    "q80": 35557673,
+    "count_with_data": 215,
+    "count_total": 215,
+    "indicator_code": "SP.POP.TOTL",
+    "label_he": "אוכלוסייה כוללת (מספר תושבים)"
+  },
+  "_time_series_meta": {
+    "keys": [
+      "net_migration",
+      "life_expectancy",
+      "literacy_rate",
+      "birth_rate",
+      "death_rate",
+      "urban_pct",
+      "population",
+      "natural_growth_rate"
+    ],
+    "min_year": 1975,
+    "max_year": 2024,
+    "point_counts": {
+      "net_migration": 10750,
+      "life_expectancy": 10750,
+      "literacy_rate": 1098,
+      "birth_rate": 10750,
+      "death_rate": 10750,
+      "urban_pct": 10750,
+      "population": 10750,
+      "natural_growth_rate": 10750
+    }
   }
 }

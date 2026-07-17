@@ -2,6 +2,8 @@ import json
 from shapely.geometry import shape, mapping
 from shapely.ops import unary_union
 from hebrew_names import HEBREW_NAMES
+from piaac_data import PIAAC_LITERACY, PIAAC_YEAR, PIAAC_SOURCE_URL
+from legacy_literacy_data import LEGACY_LITERACY
 
 INDICATORS = [
     ("net_migration", "SM.POP.NETM", "wb_SM_POP_NETM.json",
@@ -18,12 +20,37 @@ INDICATORS = [
      "אחוז עירוניות (% מהאוכלוסייה)"),
 ]
 
+# 50-year (1975-2024) historical series, fetched separately (full date range, not mrnev).
+# Used for the time-slider feature. "population" has no separate current-value indicator in
+# INDICATORS above -- its current value/year is derived from the latest point in its own series.
+HISTORICAL_SERIES = [
+    ("net_migration", "SM.POP.NETM", "wb_hist_SM_POP_NETM.json"),
+    ("life_expectancy", "SP.DYN.LE00.IN", "wb_hist_SP_DYN_LE00_IN.json"),
+    ("literacy_rate", "SE.ADT.LITR.ZS", "wb_hist_SE_ADT_LITR_ZS.json"),
+    ("birth_rate", "SP.DYN.CBRT.IN", "wb_hist_SP_DYN_CBRT_IN.json"),
+    ("death_rate", "SP.DYN.CDRT.IN", "wb_hist_SP_DYN_CDRT_IN.json"),
+    ("urban_pct", "SP.URB.TOTL.IN.ZS", "wb_hist_SP_URB_TOTL_IN_ZS.json"),
+    ("population", "SP.POP.TOTL", "wb_hist_SP_POP_TOTL.json"),
+]
+
 # 1. load country metadata, keep only real countries (not aggregates)
+REGION_HE = {
+    "East Asia & Pacific": "מזרח אסיה והאוקיינוס השקט",
+    "Europe & Central Asia": "אירופה ואסיה המרכזית",
+    "Latin America & Caribbean": "אמריקה הלטינית והקריביים",
+    "Middle East, North Africa, Afghanistan & Pakistan": "המזרח התיכון, צפון אפריקה, אפגניסטן ופקיסטן",
+    "North America": "צפון אמריקה",
+    "South Asia": "דרום אסיה",
+    "Sub-Saharan Africa": "אפריקה שמדרום לסהרה",
+}
+
 meta = json.load(open("countries_meta.json", encoding="utf-8"))[1]
 real_countries = {}
+region_by_iso3 = {}
 for r in meta:
     if r["region"]["value"] != "Aggregates":
         real_countries[r["id"]] = r["name"]
+        region_by_iso3[r["id"]] = r["region"]["value"].strip()
 
 print("real countries:", len(real_countries))
 
@@ -41,6 +68,24 @@ for key, code, fname, label in INDICATORS:
         vals[iso3] = {"value": rec["value"], "year": rec["date"]}
     indicator_data[key] = vals
     print(key, "-> matched countries:", len(vals))
+
+# 2b. load 50-year historical series (for the time slider)
+historical_data = {}
+for key, code, fname in HISTORICAL_SERIES:
+    d = json.load(open(fname, encoding="utf-8"))[1]
+    by_country = {}
+    for rec in d:
+        iso3 = rec.get("countryiso3code")
+        if not iso3 or iso3 not in real_countries:
+            continue
+        if rec.get("value") is None:
+            continue
+        by_country.setdefault(iso3, []).append([int(rec["date"]), rec["value"]])
+    for iso3 in by_country:
+        by_country[iso3].sort(key=lambda p: p[0])
+    historical_data[key] = by_country
+    n_years = sum(len(v) for v in by_country.values())
+    print(key, "-> historical series countries:", len(by_country), "| total data points:", n_years)
 
 # 3. load boundaries geojson
 geo = json.load(open("countries.geojson", encoding="utf-8"))
@@ -82,15 +127,57 @@ for iso3, name in real_countries.items():
     if not feat:
         continue
     matched_iso3.add(iso3)
+    region_en = region_by_iso3.get(iso3)
     props = {
         "name": HEBREW_NAMES.get(iso3, name),
         "name_en": name,
         "iso3": iso3,
+        "region": REGION_HE.get(region_en, region_en),
+        "region_en": region_en,
     }
     for key, code, fname, label in INDICATORS:
         entry = indicator_data[key].get(iso3)
         props[key] = entry["value"] if entry else None
         props[key + "_year"] = entry["year"] if entry else None
+    props["literacy_rate_source"] = "wb" if props["literacy_rate"] is not None else None
+    props["literacy_rate_note"] = None
+    if props["literacy_rate"] is None:
+        legacy = LEGACY_LITERACY.get(iso3)
+        if legacy:
+            props["literacy_rate"] = legacy["value"]
+            props["literacy_rate_year"] = legacy["year"]
+            props["literacy_rate_source"] = "cia_legacy"
+            props["literacy_rate_note"] = legacy["note"]
+    piaac = PIAAC_LITERACY.get(iso3)
+    props["piaac_literacy"] = piaac["score"] if piaac else None
+    props["piaac_literacy_year"] = piaac.get("year", PIAAC_YEAR) if piaac else None
+    props["piaac_literacy_note"] = piaac["note"] if piaac else None
+    # derived layer: natural growth rate = birth rate - death rate (per 1,000 people), both from World Bank
+    if props["birth_rate"] is not None and props["death_rate"] is not None:
+        props["natural_growth_rate"] = round(props["birth_rate"] - props["death_rate"], 3)
+        by, dy = props["birth_rate_year"], props["death_rate_year"]
+        props["natural_growth_rate_year"] = by if by == dy else f"{by}/{dy}"
+    else:
+        props["natural_growth_rate"] = None
+        props["natural_growth_rate_year"] = None
+
+    # 50-year historical series (compact [year, value] pairs) for the time slider
+    for hkey, hcode, hfname in HISTORICAL_SERIES:
+        props[hkey + "_series"] = historical_data[hkey].get(iso3, [])
+    if props["population_series"]:
+        last_year, last_val = props["population_series"][-1]
+        props["population"] = last_val
+        props["population_year"] = str(last_year)
+    else:
+        props["population"] = None
+        props["population_year"] = None
+    birth_by_year = dict(props["birth_rate_series"])
+    death_by_year = dict(props["death_rate_series"])
+    props["natural_growth_rate_series"] = [
+        [year, round(birth_by_year[year] - death_by_year[year], 3)]
+        for year in sorted(set(birth_by_year) & set(death_by_year))
+    ]
+
     new_feat = {
         "type": "Feature",
         "properties": props,
@@ -136,17 +223,15 @@ with open("../data/world_data.geojson", "w", encoding="utf-8") as fh:
 print("output size bytes:", os.path.getsize("../data/world_data.geojson"))
 
 # 7. compute stats per indicator for legend breaks (quantiles over available values)
-stats = {}
-for key, code, fname, label in INDICATORS:
-    values = sorted(v for v in (f["properties"][key] for f in final_features) if v is not None)
+def compute_stats(values, indicator_code, label_he, extra=None):
+    values = sorted(values)
     n = len(values)
     if n == 0:
-        stats[key] = None
-        continue
+        return None
     def q(p):
         idx = min(n - 1, max(0, int(round(p * (n - 1)))))
         return values[idx]
-    stats[key] = {
+    s = {
         "min": values[0],
         "max": values[-1],
         "q20": q(0.2),
@@ -155,12 +240,82 @@ for key, code, fname, label in INDICATORS:
         "q80": q(0.8),
         "count_with_data": n,
         "count_total": len(final_features),
-        "indicator_code": code,
-        "label_he": label,
+        "indicator_code": indicator_code,
+        "label_he": label_he,
     }
+    if extra:
+        s.update(extra)
+    return s
+
+stats = {}
+for key, code, fname, label in INDICATORS:
+    vals = [f["properties"][key] for f in final_features if f["properties"][key] is not None]
+    stats[key] = compute_stats(vals, code, label)
+
+piaac_vals = [f["properties"]["piaac_literacy"] for f in final_features if f["properties"]["piaac_literacy"] is not None]
+stats["piaac_literacy"] = compute_stats(
+    piaac_vals, "OECD PIAAC", "מיומנות אוריינות פונקציונלית (OECD PIAAC, סולם 0–500)",
+    extra={"source_url": PIAAC_SOURCE_URL},
+)
+
+ngr_vals = [f["properties"]["natural_growth_rate"] for f in final_features if f["properties"]["natural_growth_rate"] is not None]
+stats["natural_growth_rate"] = compute_stats(
+    ngr_vals, "SP.DYN.CBRT.IN minus SP.DYN.CDRT.IN (מחושב)", "גידול טבעי (שיעור ילודה פחות שיעור תמותה, ל-1,000 נפש)",
+)
+
+pop_vals = [f["properties"]["population"] for f in final_features if f["properties"]["population"] is not None]
+stats["population"] = compute_stats(pop_vals, "SP.POP.TOTL", "אוכלוסייה כוללת (מספר תושבים)")
+
+# time-slider metadata: which layers have a usable historical series, and the overall year range
+TIME_SERIES_KEYS = ["net_migration", "life_expectancy", "literacy_rate", "birth_rate",
+                     "death_rate", "urban_pct", "population", "natural_growth_rate"]
+all_years = set()
+series_counts = {}
+for key in TIME_SERIES_KEYS:
+    skey = key + "_series"
+    cnt = 0
+    for f in final_features:
+        series = f["properties"].get(skey, [])
+        cnt += len(series)
+        for year, _ in series:
+            all_years.add(year)
+    series_counts[key] = cnt
+stats["_time_series_meta"] = {
+    "keys": TIME_SERIES_KEYS,
+    "min_year": min(all_years) if all_years else None,
+    "max_year": max(all_years) if all_years else None,
+    "point_counts": series_counts,
+}
 
 with open("../data/indicator_stats.json", "w", encoding="utf-8") as fh:
     json.dump(stats, fh, ensure_ascii=False, indent=2)
+
+# 8. embed the data directly into index.html so the file works via plain double-click
+# (fetch() of local files is blocked by browsers under file://), not just via a server/GitHub Pages.
+import re
+
+html_path = "../index.html"
+with open(html_path, "r", encoding="utf-8") as fh:
+    html = fh.read()
+
+geo_json_str = json.dumps(final_geo, ensure_ascii=False, separators=(",", ":")).replace("</script", "<\\/script")
+stats_json_str = json.dumps(stats, ensure_ascii=False, separators=(",", ":")).replace("</script", "<\\/script")
+
+html = re.sub(
+    r'(<script type="application/json" id="embeddedWorldData">)(.*?)(</script>)',
+    lambda m: m.group(1) + geo_json_str + m.group(3),
+    html, count=1, flags=re.DOTALL,
+)
+html = re.sub(
+    r'(<script type="application/json" id="embeddedIndicatorStats">)(.*?)(</script>)',
+    lambda m: m.group(1) + stats_json_str + m.group(3),
+    html, count=1, flags=re.DOTALL,
+)
+
+with open(html_path, "w", encoding="utf-8") as fh:
+    fh.write(html)
+
+print("embedded data injected into index.html")
 
 for k, v in stats.items():
     print(k, v)
