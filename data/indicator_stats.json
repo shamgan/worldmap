@@ -1,0 +1,74 @@
+{
+  "net_migration": {
+    "min": -1235336,
+    "max": 1702358,
+    "q20": -21606,
+    "q40": -3179,
+    "q60": -2,
+    "q80": 11254,
+    "count_with_data": 215,
+    "count_total": 215,
+    "indicator_code": "SM.POP.NETM",
+    "label_he": "מאזן הגירה (מספר מהגרים נטו, ל-5 שנים)"
+  },
+  "life_expectancy": {
+    "min": 54.635,
+    "max": 86.497,
+    "q20": 67.357,
+    "q40": 72.56,
+    "q60": 76.711,
+    "q80": 81.285,
+    "count_with_data": 215,
+    "count_total": 215,
+    "indicator_code": "SP.DYN.LE00.IN",
+    "label_he": "תוחלת חיים בלידה (שנים)"
+  },
+  "literacy_rate": {
+    "min": 26.8299999237061,
+    "max": 100,
+    "q20": 71.7699966430664,
+    "q40": 88.8600006103516,
+    "q60": 96.129997253418,
+    "q80": 98.6800003051758,
+    "count_with_data": 169,
+    "count_total": 215,
+    "indicator_code": "SE.ADT.LITR.ZS",
+    "label_he": "אחוז יודעי קרוא וכתוב (גילאי 15+)"
+  },
+  "birth_rate": {
+    "min": 4.2,
+    "max": 46.193,
+    "q20": 8.9,
+    "q40": 11.209,
+    "q60": 17.152,
+    "q80": 26.707,
+    "count_with_data": 215,
+    "count_total": 215,
+    "indicator_code": "SP.DYN.CBRT.IN",
+    "label_he": "שיעור ילודה (ל-1,000 נפש)"
+  },
+  "death_rate": {
+    "min": 0.972,
+    "max": 20.141,
+    "q20": 5.697,
+    "q40": 6.8,
+    "q60": 7.8,
+    "q80": 9.741,
+    "count_with_data": 215,
+    "count_total": 215,
+    "indicator_code": "SP.DYN.CDRT.IN",
+    "label_he": "שיעור תמותה (ל-1,000 נפש)"
+  },
+  "urban_pct": {
+    "min": 14.6298998993293,
+    "max": 100,
+    "q20": 39.643321785446,
+    "q40": 59.3929063969984,
+    "q60": 70.6936831786278,
+    "q80": 85.7272157802756,
+    "count_with_data": 215,
+    "count_total": 215,
+    "indicator_code": "SP.URB.TOTL.IN.ZS",
+    "label_he": "אחוז עירוניות (% מהאוכלוסייה)"
+  }
+}
